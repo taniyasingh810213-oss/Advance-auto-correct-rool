@@ -3,51 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Autocorrect Tool</title>
-    <script type="module" crossorigin src="https://cdn.jsdelivr.net/npm/@gradio/lite/dist/lite.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gradio/lite/dist/lite.css" />
+    <title>AI-Powered Autocorrect Engine</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            width: 100%;
+            max-width: 600px;
+        }
+        h1 {
+            color: #1a73e8;
+            margin-top: 0;
+            font-size: 24px;
+            text-align: center;
+        }
+        p {
+            color: #5f6368;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        label {
+            font-weight: 600;
+            color: #3c4043;
+            display: block;
+            margin-bottom: 8px;
+        }
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            resize: vertical;
+            margin-bottom: 20px;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26,115,232,0.2);
+        }
+        .output-box {
+            background-color: #f8f9fa;
+            border: 1px solid #e8eaed;
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 50px;
+            font-size: 16px;
+            color: #202124;
+            white-space: pre-wrap;
+        }
+    </style>
 </head>
 <body>
-    <gradio-lite>
-import gradio as gr
 
-vocabulary = {"the", "cat", "car", "hat", "rat", "sat", "mat", "apple", "kitty", "house", "want", "eat", "fly", "drive"}
+<div class="container">
+    <h1>✨ AI-Powered Autocorrect Engine</h1>
+    <p>Improve text accuracy and fluency instantly.</p>
+    
+    <label for="input-text">Type your custom typos here:</label>
+    <textarea id="input-text" placeholder="try typing: 'the cat sat on the mat want to eat apple' with some typos like 'caat' or 'appl'"></textarea>
+    
+    <label>✨ Fixed Output:</label>
+    <div id="output-text" class="output-box">Your corrected text will appear here as you type...</div>
+</div>
 
-def generate_edits(word):
-    letters = 'abcdefghijklmnopqrstuvwxyz'
-    splits = [(word[:i], word[i:]) for i in range(len(word) + 1)]
-    deletes = [L + R[1:] for L, R in splits if R]
-    swaps = [L + R[1] + R[0] + R[2:] for L, R in splits if len(R) > 1]
-    replaces = [L + c + R[1:] for L, R in splits if R for c in letters]
-    inserts = [L + c + R for L, R in splits for c in letters]
-    return set(deletes + swaps + replaces + inserts)
+<script>
+    // Our built-in vocabulary dictionary
+    const vocabulary = new Set(["the", "cat", "car", "hat", "rat", "sat", "mat", "apple", "kitty", "house", "want", "eat", "fly", "drive"]);
 
-def advanced_autocorrect(typo_word):
-    typo_word = typo_word.lower()
-    if typo_word in vocabulary:
-        return typo_word
-    all_variations = generate_edits(typo_word)
-    valid_candidates = [w for w in all_variations if w in vocabulary]
-    if not valid_candidates:
-        return typo_word
-    return valid_candidates[0]
+    function generateEdits(word) {
+        const letters = 'abcdefghijklmnopqrstuvwxyz';
+        const edits = new Set();
+        
+        // Splits
+        for (let i = 0; i <= word.length; i++) {
+            const L = word.slice(0, i);
+            const R = word.slice(i);
+            
+            // Deletes
+            if (R.length > 0) edits.add(L + R.slice(1));
+            
+            // Swaps
+            if (R.length > 1) edits.add(L + R[1] + R[0] + R.slice(2));
+            
+            // Replaces
+            if (R.length > 0) {
+                for (let c of letters) {
+                    edits.add(L + c + R.slice(1));
+                }
+            }
+            
+            // Inserts
+            for (let c of letters) {
+                edits.add(L + c + R);
+            }
+        }
+        return edits;
+    }
 
-def fix_entire_sentence(sentence):
-    words_list = sentence.split()
-    fixed_words = []
-    for word in words_list:
-        clean_word = word.lower().strip(".,!?")
-        corrected = advanced_autocorrect(clean_word)
-        fixed_words.append(corrected)
-    return " ".join(fixed_words)
+    function autocorrectWord(word) {
+        word = word.toLowerCase().trim();
+        if (!word) return "";
+        
+        // If it's already spelled right
+        if (vocabulary.has(word)) return word;
+        
+        // Generate edits
+        const candidates = generateEdits(word);
+        const validCandidates = Array.from(candidates).filter(w => vocabulary.has(w));
+        
+        // Return first match or original if none found
+        return validCandidates.length > 0 ? validCandidates[0] : word;
+    }
 
-app = gr.Interface(
-    fn=fix_entire_sentence,
-    inputs=gr.Textbox(lines=3, label="Type your custom typos here:"),
-    outputs=gr.Textbox(label="✨ Fixed Output:"),
-    title="✨ My Cloud Autocorrect Tool"
-)
-app.launch()
-    </gradio-lite>
+    function processSentence() {
+        const input = document.getElementById('input-text').value;
+        const words = input.split(/(\s+)/); // Keep spaces
+        
+        const correctedWords = words.map(chunk => {
+            // Check if it's a word or just spacing
+            if (chunk.trim() === "") return chunk;
+            
+            // Separate punctuation
+            const match = chunk.match(/^([.,!?]*)(.*?)([.,!?]*)$/);
+            const leadingPunct = match[1];
+            const coreWord = match[2];
+            const trailingPunct = match[3];
+            
+            return leadingPunct + autocorrectWord(coreWord) + trailingPunct;
+        });
+        
+        document.getElementById('output-text').innerText = correctedWords.join("");
+    }
+
+    // Run the function in real-time as the user types
+    document.getElementById('input-text').addEventListener('input', processSentence);
+</script>
+
 </body>
 </html>
