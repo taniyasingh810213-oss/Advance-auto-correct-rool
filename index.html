@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@gradio/lite@1/dist/lite.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gradio/lite@1/dist/lite.css" />
+</head>
+<body>
+    <gradio-lite>
+    import gradio as gr
+
+    vocabulary = {"the", "cat", "car", "hat", "rat", "sat", "mat", "apple", "kitty", "house", "want", "eat", "fly", "drive"}
+
+    def generate_edits(word):
+        letters = 'abcdefghijklmnopqrstuvwxyz'
+        splits = [(word[:i], word[i:]) for i in range(len(word) + 1)]
+        deletes = [L + R[1:] for L, R in splits if R]
+        swaps = [L + R[1] + R[0] + R[2:] for L, R in splits if len(R) > 1]
+        replaces = [L + c + R[1:] for L, R in splits if R for c in letters]
+        inserts = [L + c + R for L, R in splits for c in letters]
+        return set(deletes + swaps + replaces + inserts)
+
+    def advanced_autocorrect(typo_word):
+        typo_word = typo_word.lower()
+        if typo_word in vocabulary:
+            return typo_word
+        all_variations = generate_edits(typo_word)
+        valid_candidates = [w for w in all_variations if w in vocabulary]
+        if not valid_candidates:
+            return typo_word
+        return valid_candidates[0]
+
+    def fix_entire_sentence(sentence):
+        words_list = sentence.split()
+        fixed_words = []
+        for word in words_list:
+            clean_word = word.lower().strip(".,!?")
+            corrected = advanced_autocorrect(clean_word)
+            fixed_words.append(corrected)
+        return " ".join(fixed_words)
+
+    app = gr.Interface(
+        fn=fix_entire_sentence,
+        inputs=gr.Textbox(lines=3, label="Type your custom typos here:"),
+        outputs=gr.Textbox(label="✨ Fixed Output:"),
+        title="✨ My Cloud Autocorrect Tool"
+    )
+    app.launch()
+    </gradio-lite>
+</body>
+</html>
